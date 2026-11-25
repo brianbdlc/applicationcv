@@ -30,6 +30,14 @@
     #cv .exp-meta { color: #555; font-size: .9rem; }
     #cv .tags { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: .4rem; }
     #cv .tags li { background: #eef2ff; color: #3730a3; padding: .15rem .55rem; border-radius: 4px; font-size: .9rem; }
+    #rapport { margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid #e5e5e5; }
+    #rapport h2 { font-size: 1.25rem; }
+    #rapport h3 { font-size: 1rem; margin: 1rem 0 .25rem; }
+    .corrections li { color: #065f46; }
+    .alertes { padding: .5rem 1rem; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 6px; }
+    .alertes li { color: #92400e; }
+    .doutes { padding: .5rem 1rem; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 6px; }
+    .doutes li { color: #991b1b; }
   </style>
 </head>
 <body>
@@ -80,11 +88,29 @@
     <ul id="cv-langues" class="tags"></ul>
   </div>
 
+  <div id="rapport" class="hidden">
+    <h2>🧾 Rapport de relecture</h2>
+
+    <h3>✍️ Corrections appliquées</h3>
+    <ul id="corrections" class="corrections"></ul>
+
+    <div id="bloc-alertes" class="hidden">
+      <h3>⚠️ Alertes</h3>
+      <ul id="alertes" class="alertes"></ul>
+    </div>
+
+    <div id="bloc-doutes" class="hidden">
+      <h3>🙋 À trancher par toi</h3>
+      <ul id="doutes" class="doutes"></ul>
+    </div>
+  </div>
+
   <script>
     const btn = document.getElementById('btn');
     const erreurEl = document.getElementById('erreur');
     const resultatEl = document.getElementById('resultat');
     const cvEl = document.getElementById('cv');
+    const rapportEl = document.getElementById('rapport');
 
     const LIBELLES = {
       fr: { resume: 'Résumé', exp: 'Expérience', form: 'Formation', comp: 'Compétences', lang: 'Langues' },
@@ -174,11 +200,23 @@
       }
     }
 
+    // Affiche un bloc (alertes/doutes) seulement s'il y a des éléments.
+    function remplirBlocOptionnel(blocId, listeId, items) {
+      const bloc = document.getElementById(blocId);
+      if (items && items.length) {
+        remplirListe(listeId, items);
+        bloc.classList.remove('hidden');
+      } else {
+        bloc.classList.add('hidden');
+      }
+    }
+
     btn.addEventListener('click', async () => {
       const texteOffre = document.getElementById('offre').value;
       erreurEl.classList.add('hidden');
       resultatEl.classList.add('hidden');
       cvEl.classList.add('hidden');
+      rapportEl.classList.add('hidden');
       btn.disabled = true;
       btn.textContent = 'Génération en cours…';
 
@@ -207,6 +245,12 @@
         if (data.cv) {
           remplirCv(data.cv, a.langue_offre);
           cvEl.classList.remove('hidden');
+
+          remplirListe('corrections', (data.corrections && data.corrections.length)
+            ? data.corrections : ['Aucune correction nécessaire : le CV est fidèle au profil.']);
+          remplirBlocOptionnel('bloc-alertes', 'alertes', data.alertes);
+          remplirBlocOptionnel('bloc-doutes', 'doutes', data.doutes);
+          rapportEl.classList.remove('hidden');
         }
       } catch (e) {
         erreurEl.textContent = 'Impossible de contacter le serveur.';

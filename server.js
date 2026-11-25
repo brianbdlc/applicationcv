@@ -116,6 +116,38 @@ async function rediger(profil, texteOffre, analyse) {
   return extraireJson(reponse);
 }
 
+const SYSTEME_RELECTURE = `Tu es un relecteur de CV rigoureux. On te donne le PROFIL enrichi d'un candidat (JSON, SEULE source de vérité) et un BROUILLON de CV (JSON) rédigé pour une offre.
+Relis le brouillon phrase par phrase et corrige TOI-MÊME tout élément inventé, exagéré ou absent du profil.
+
+Règles strictes :
+- Tout fait du CV doit être justifié par le profil. Un fait absent du profil → supprime-le. Un fait exagéré (chiffre gonflé, responsabilité amplifiée, compétence non listée) → ramène-le au niveau du profil ou supprime-le.
+- Ne RÉÉCRIS pas le style pour le plaisir : ne touche qu'aux éléments non fidèles. Garde le reste tel quel.
+- Conserve EXACTEMENT les champs "periode" et "duree" de chaque expérience (ne les recalcule pas).
+- Garde la même langue que le brouillon. Garde la même structure JSON que le brouillon.
+- "corrections" : liste de phrases courtes décrivant chaque correction appliquée (ce qui a été retiré/corrigé et pourquoi). Vide si rien à corriger.
+- "alertes" : liste de phrases signalant des points de vigilance (formulations limites gardées, incohérences mineures). Vide si aucune.
+- "doutes" : liste de points où tu n'as PAS pu trancher seul et où l'utilisateur doit décider. N'y mets un élément QUE si un vrai doute subsiste après correction. Vide sinon.
+
+Réponds EXCLUSIVEMENT par un objet JSON valide, sans texte autour, de la forme :
+{"cv":{"resume":"","experiences":[{"poste":"","entreprise":"","lieu":"","periode":"","duree":"","realisations":[]}],"formations":[{"diplome":"","etablissement":"","periode":""}],"competences":[]},"corrections":[],"alertes":[],"doutes":[]}`;
+
+async function relire(profil, cvModele, langue) {
+  const enrichi = enrichirProfil(profil, langue);
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const reponse = await client.messages.create({
+    model: MODELE,
+    max_tokens: 4000,
+    system: SYSTEME_RELECTURE,
+    messages: [
+      {
+        role: 'user',
+        content: `LANGUE : ${langue}\n\nPROFIL (source de vérité) :\n${JSON.stringify(enrichi)}\n\nBROUILLON DE CV :\n${JSON.stringify(cvModele)}`,
+      },
+    ],
+  });
+  return extraireJson(reponse);
+}
+
 app.post('/api/generer', async (req, res) => {
   if (!process.env.ANTHROPIC_API_KEY) {
     return res.status(500).json({ erreur: 'Clé API absente : renseigne ANTHROPIC_API_KEY dans .env.' });
@@ -135,16 +167,28 @@ app.post('/api/generer', async (req, res) => {
 
   try {
     const analyse = await analyser(profil, texteOffre);
-    const cvModele = await rediger(profil, texteOffre, analyse);
+    const brouillon = await rediger(profil, texteOffre, analyse);
+    const releve = await relire(profil, brouillon, analyse.langue_offre);
+    const cvModele = releve.cv || brouillon;
     const cv = { identite: profil.identite, langues: profil.langues, ...cvModele };
-    return res.json({ analyse, cv });
+    return res.json({
+      analyse,
+      cv,
+      corrections: releve.corrections || [],
+      alertes: releve.alertes || [],
+      doutes: releve.doutes || [],
+    });
   } catch (e) {
     console.error('Échec génération :', e.message);
     return res.status(502).json({ erreur: 'Échec de la génération par Claude. Réessaie.' });
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`App prête sur http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`App prête sur http://localhost:${PORT}`);
+  });
+}
+
+module.exports = { lireProfil, analyser, rediger, relire };
