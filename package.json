@@ -1,0 +1,14 @@
+{
+  "name": "applicationcv",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Générateur de CV fidèle, optimisé ATS (local)",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.68.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2"
+  }
+}

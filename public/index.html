@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CV — Analyse de l'offre</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; line-height: 1.5; }
+    h1 { font-size: 1.5rem; }
+    textarea { width: 100%; min-height: 200px; padding: .75rem; font: inherit; border: 1px solid #ccc; border-radius: 6px; }
+    button { margin-top: .75rem; padding: .6rem 1.4rem; font-size: 1rem; border: 0; border-radius: 6px; background: #2563eb; color: #fff; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: default; }
+    .erreur { margin-top: 1rem; padding: .75rem 1rem; background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; border-radius: 6px; }
+    .score { margin-top: 1.5rem; font-size: 1.1rem; }
+    .score strong { font-size: 1.6rem; }
+    .justif { color: #444; font-style: italic; }
+    .listes { margin-top: 1rem; }
+    .liste h2 { font-size: 1rem; margin-bottom: .25rem; }
+    .liste ul { margin-top: 0; }
+    .vide { color: #777; font-style: italic; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h1>Analyse de l'offre face à ton profil</h1>
+  <p>Colle le texte de l'offre d'emploi ci-dessous, puis clique sur « Générer ».</p>
+
+  <textarea id="offre" placeholder="Colle ici le texte de l'offre…"></textarea>
+  <br>
+  <button id="btn">Générer</button>
+
+  <div id="erreur" class="erreur hidden"></div>
+
+  <div id="resultat" class="hidden">
+    <div class="score">
+      Score de correspondance : <strong id="score"></strong> / 100
+      <div class="justif" id="justif"></div>
+    </div>
+    <div class="listes">
+      <div class="liste"><h2>✅ Exigences couvertes</h2><ul id="couvertes"></ul></div>
+      <div class="liste"><h2>🟡 Partiellement couvertes</h2><ul id="partielles"></ul></div>
+      <div class="liste"><h2>❌ Absentes du profil</h2><ul id="absentes"></ul></div>
+    </div>
+  </div>
+
+  <script>
+    const btn = document.getElementById('btn');
+    const erreurEl = document.getElementById('erreur');
+    const resultatEl = document.getElementById('resultat');
+
+    function remplirListe(id, items) {
+      const ul = document.getElementById(id);
+      ul.innerHTML = '';
+      if (!items || items.length === 0) {
+        ul.innerHTML = '<li class="vide">Aucun élément</li>';
+        return;
+      }
+      for (const item of items) {
+        const li = document.createElement('li');
+        li.textContent = item;
+        ul.appendChild(li);
+      }
+    }
+
+    btn.addEventListener('click', async () => {
+      const texteOffre = document.getElementById('offre').value;
+      erreurEl.classList.add('hidden');
+      resultatEl.classList.add('hidden');
+      btn.disabled = true;
+      btn.textContent = 'Analyse en cours…';
+
+      try {
+        const r = await fetch('/api/generer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ texteOffre }),
+        });
+        const data = await r.json();
+
+        if (!r.ok) {
+          erreurEl.textContent = data.erreur || 'Erreur inattendue.';
+          erreurEl.classList.remove('hidden');
+          return;
+        }
+
+        const a = data.analyse;
+        document.getElementById('score').textContent = a.score;
+        document.getElementById('justif').textContent = a.justification || '';
+        remplirListe('couvertes', a.couvertes);
+        remplirListe('partielles', a.partielles);
+        remplirListe('absentes', a.absentes);
+        resultatEl.classList.remove('hidden');
+      } catch (e) {
+        erreurEl.textContent = 'Impossible de contacter le serveur.';
+        erreurEl.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Générer';
+      }
+    });
+  </script>
+</body>
+</html>
