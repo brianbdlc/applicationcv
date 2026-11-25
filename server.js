@@ -17,6 +17,55 @@ const MODELE = process.env.MODELE || 'claude-sonnet-5';
 const DOSSIER_SORTIE = path.join(__dirname, 'sortie');
 fs.mkdirSync(DOSSIER_SORTIE, { recursive: true });
 
+// Extrait le texte visible d'une page HTML : retire script/style, balises, décode les entités courantes.
+function htmlVersTexte(html) {
+  return String(html)
+    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\s*\n\s*/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+// Récupère le texte de l'offre depuis une URL. Lève err.statut=400 avec un message clair en cas d'échec.
+async function recupererOffre(lien) {
+  const echec = () => {
+    const err = new Error('Lien inaccessible (page bloquée ou indisponible) : colle le texte de l\'offre.');
+    err.statut = 400;
+    return err;
+  };
+  let url;
+  try {
+    url = new URL(lien);
+  } catch {
+    throw echec();
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') throw echec();
+
+  let html;
+  try {
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(10000),
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CV-ATS/1.0)' },
+    });
+    if (!res.ok) throw echec();
+    html = await res.text();
+  } catch (e) {
+    throw e.statut ? e : echec();
+  }
+
+  const texte = htmlVersTexte(html);
+  if (texte.length < 50) throw echec();
+  return texte;
+}
+
 // Lit et parse profil.json. Lève une erreur typée (err.code) pour des messages distincts.
 function lireProfil() {
   let brut;
@@ -158,9 +207,18 @@ app.post('/api/generer', async (req, res) => {
     return res.status(500).json({ erreur: 'Clé API absente : renseigne ANTHROPIC_API_KEY dans .env.' });
   }
 
-  const texteOffre = (req.body && req.body.texteOffre ? String(req.body.texteOffre) : '').trim();
+  let texteOffre = (req.body && req.body.texteOffre ? String(req.body.texteOffre) : '').trim();
+  const lien = (req.body && req.body.lien ? String(req.body.lien) : '').trim();
+
+  if (!texteOffre && lien) {
+    try {
+      texteOffre = await recupererOffre(lien);
+    } catch (e) {
+      return res.status(e.statut || 400).json({ erreur: e.message });
+    }
+  }
   if (!texteOffre) {
-    return res.status(400).json({ erreur: "Offre vide : colle le texte de l'offre." });
+    return res.status(400).json({ erreur: "Offre vide : colle le texte de l'offre ou fournis un lien." });
   }
 
   let profil;
@@ -212,4 +270,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { lireProfil, analyser, rediger, relire };
+module.exports = { lireProfil, analyser, rediger, relire, htmlVersTexte, recupererOffre };

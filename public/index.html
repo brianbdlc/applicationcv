@@ -8,6 +8,8 @@
     * { box-sizing: border-box; }
     body { font-family: system-ui, -apple-system, sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; line-height: 1.5; }
     h1 { font-size: 1.5rem; }
+    input[type=url] { width: 100%; padding: .6rem .75rem; font: inherit; border: 1px solid #ccc; border-radius: 6px; }
+    .ou { color: #777; text-align: center; margin: .5rem 0; font-size: .9rem; }
     textarea { width: 100%; min-height: 200px; padding: .75rem; font: inherit; border: 1px solid #ccc; border-radius: 6px; }
     button { margin-top: .75rem; padding: .6rem 1.4rem; font-size: 1rem; border: 0; border-radius: 6px; background: #2563eb; color: #fff; cursor: pointer; }
     button:disabled { opacity: .6; cursor: default; }
@@ -44,8 +46,10 @@
 </head>
 <body>
   <h1>Analyse de l'offre face à ton profil</h1>
-  <p>Colle le texte de l'offre d'emploi ci-dessous, puis clique sur « Générer ».</p>
+  <p>Fournis un lien vers l'offre <strong>ou</strong> colle son texte, puis clique sur « Générer ».</p>
 
+  <input id="lien" type="url" placeholder="Lien de l'offre (optionnel)…">
+  <div class="ou">— ou —</div>
   <textarea id="offre" placeholder="Colle ici le texte de l'offre…"></textarea>
   <br>
   <button id="btn">Générer</button>
@@ -220,6 +224,7 @@
 
     btn.addEventListener('click', async () => {
       const texteOffre = document.getElementById('offre').value;
+      const lien = document.getElementById('lien').value;
       erreurEl.classList.add('hidden');
       resultatEl.classList.add('hidden');
       cvEl.classList.add('hidden');
@@ -231,7 +236,7 @@
         const r = await fetch('/api/generer', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ texteOffre }),
+          body: JSON.stringify({ texteOffre, lien }),
         });
         const data = await r.json();
 
