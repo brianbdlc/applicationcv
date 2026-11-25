@@ -84,6 +84,11 @@
     <h3 id="cv-h-exp">Expérience</h3>
     <div id="cv-experiences"></div>
 
+    <div id="bloc-benev" class="hidden">
+      <h3 id="cv-h-benev">Bénévolats</h3>
+      <ul id="cv-benevolats"></ul>
+    </div>
+
     <h3 id="cv-h-form">Formation</h3>
     <div id="cv-formations"></div>
 
@@ -92,6 +97,11 @@
 
     <h3 id="cv-h-lang">Langues</h3>
     <ul id="cv-langues" class="tags"></ul>
+
+    <div id="bloc-interets" class="hidden">
+      <h3 id="cv-h-interets">Intérêts</h3>
+      <ul id="cv-interets" class="tags"></ul>
+    </div>
 
     <div id="telechargements" class="dl">
       <a id="dl-docx" download href="/telecharger/cv.docx">⬇️ Télécharger .docx</a>
@@ -124,8 +134,8 @@
     const rapportEl = document.getElementById('rapport');
 
     const LIBELLES = {
-      fr: { resume: 'Résumé', exp: 'Expérience', form: 'Formation', comp: 'Compétences', lang: 'Langues' },
-      en: { resume: 'Summary', exp: 'Experience', form: 'Education', comp: 'Skills', lang: 'Languages' },
+      fr: { resume: 'Résumé', exp: 'Expérience', benev: 'Bénévolats', form: 'Formation', comp: 'Compétences', lang: 'Langues', interets: 'Intérêts' },
+      en: { resume: 'Summary', exp: 'Experience', benev: 'Volunteering', form: 'Education', comp: 'Skills', lang: 'Languages', interets: 'Interests' },
     };
 
     function remplirTags(id, items) {
@@ -145,12 +155,14 @@
       document.getElementById('cv-h-form').textContent = L.form;
       document.getElementById('cv-h-comp').textContent = L.comp;
       document.getElementById('cv-h-lang').textContent = L.lang;
+      document.getElementById('cv-h-benev').textContent = L.benev;
+      document.getElementById('cv-h-interets').textContent = L.interets;
 
       const id = cv.identite || {};
       document.getElementById('cv-nom').textContent = id.nom || '';
       document.getElementById('cv-titre').textContent = id.titre || '';
       document.getElementById('cv-contact').textContent =
-        [id.email, id.telephone, id.lieu].filter(Boolean).join(' · ');
+        [id.email, id.telephone, id.linkedin, id.lieu].filter(Boolean).join(' · ');
       document.getElementById('cv-resume').textContent = cv.resume || '';
 
       const expEl = document.getElementById('cv-experiences');
@@ -195,6 +207,14 @@
 
       remplirTags('cv-competences', cv.competences);
       remplirTags('cv-langues', (cv.langues || []).map((l) => `${l.langue} (${l.niveau})`));
+
+      const benev = cv.benevolats || [];
+      remplirTags('cv-benevolats', benev);
+      document.getElementById('bloc-benev').classList.toggle('hidden', benev.length === 0);
+
+      const interets = cv.interets || [];
+      remplirTags('cv-interets', interets);
+      document.getElementById('bloc-interets').classList.toggle('hidden', interets.length === 0);
     }
 
     function remplirListe(id, items) {

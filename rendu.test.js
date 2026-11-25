@@ -8,14 +8,20 @@ const cv = {
   formations: [{ diplome: 'Master Info', etablissement: 'Univ', periode: '2018 – 2020' }],
   competences: ['JS', 'Node'],
   langues: [{ langue: 'Français', niveau: 'natif' }],
+  benevolats: ['Mentorat de débutants'],
+  interets: ['Course à pied'],
 };
+cv.identite.linkedin = 'https://linkedin.com/in/jean';
 
 (async () => {
   // Les éléments suivent l'ordre de l'écran : titre → contact → sections.
   const el = construireElements(cv, 'fr');
   assert.strictEqual(el[0].type, 'titre');
-  assert.ok(el.some((e) => e.type === 'section' && e.texte === 'Résumé'));
+  assert.ok(el.some((e) => e.type === 'contact' && e.texte.includes('linkedin.com')));
+  assert.ok(el.some((e) => e.type === 'label' && e.label === 'Résumé'));
   assert.ok(el.some((e) => e.type === 'puce' && e.texte === 'A fait X'));
+  assert.ok(el.some((e) => e.type === 'section' && e.texte === 'Bénévolats'));
+  assert.ok(el.some((e) => e.type === 'label' && e.label === 'Intérêts'));
 
   const docx = await genererDocx(cv, 'fr');
   assert.ok(Buffer.isBuffer(docx) && docx.length > 0, 'docx vide');

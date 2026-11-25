@@ -4,6 +4,7 @@
     "email": "camille.martin@exemple.fr",
     "telephone": "+33 6 12 34 56 78",
     "lieu": "Lyon, France",
+    "linkedin": "https://www.linkedin.com/in/camille-martin/",
     "titre": "Développeuse web full-stack"
   },
   "resume": "Développeuse full-stack avec 5 ans d'expérience sur des applications web JavaScript. J'aime livrer des produits simples et fiables, du front à la base de données.",
@@ -65,5 +66,13 @@
   "langues": [
     { "langue": "Français", "niveau": "Natif" },
     { "langue": "Anglais", "niveau": "Courant" }
+  ],
+  "benevolats": [
+    "Mentorat de jeunes développeurs au sein de l'association Code&Co : accompagnement de 5 débutants sur des projets web."
+  ],
+  "interets": [
+    "Randonnée",
+    "Photographie",
+    "Jeux de société"
   ]
 }

@@ -233,7 +233,14 @@ app.post('/api/generer', async (req, res) => {
     const brouillon = await rediger(profil, texteOffre, analyse);
     const releve = await relire(profil, brouillon, analyse.langue_offre);
     const cvModele = releve.cv || brouillon;
-    const cv = { identite: profil.identite, langues: profil.langues, ...cvModele };
+    // benevolats/interets : repris verbatim du profil (hors passes LLM), comme identite/langues.
+    const cv = {
+      identite: profil.identite,
+      langues: profil.langues,
+      benevolats: profil.benevolats || [],
+      interets: profil.interets || [],
+      ...cvModele,
+    };
 
     // Export fichiers : une source → deux rendus, écrase les précédents.
     fs.writeFileSync(path.join(DOSSIER_SORTIE, 'cv.docx'), await genererDocx(cv, analyse.langue_offre));
