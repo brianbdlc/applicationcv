@@ -30,6 +30,8 @@
     #cv .exp-meta { color: #555; font-size: .9rem; }
     #cv .tags { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: .4rem; }
     #cv .tags li { background: #eef2ff; color: #3730a3; padding: .15rem .55rem; border-radius: 4px; font-size: .9rem; }
+    .dl { margin-top: 1.5rem; display: flex; gap: .75rem; }
+    .dl a { padding: .55rem 1.1rem; background: #2563eb; color: #fff; text-decoration: none; border-radius: 6px; font-size: .95rem; }
     #rapport { margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid #e5e5e5; }
     #rapport h2 { font-size: 1.25rem; }
     #rapport h3 { font-size: 1rem; margin: 1rem 0 .25rem; }
@@ -86,6 +88,11 @@
 
     <h3 id="cv-h-lang">Langues</h3>
     <ul id="cv-langues" class="tags"></ul>
+
+    <div id="telechargements" class="dl">
+      <a id="dl-docx" download href="/telecharger/cv.docx">⬇️ Télécharger .docx</a>
+      <a id="dl-pdf" download href="/telecharger/cv.pdf">⬇️ Télécharger .pdf</a>
+    </div>
   </div>
 
   <div id="rapport" class="hidden">
@@ -245,6 +252,11 @@
         if (data.cv) {
           remplirCv(data.cv, a.langue_offre);
           cvEl.classList.remove('hidden');
+
+          // Cache-busting : les fichiers sont écrasés à chaque génération.
+          const t = Date.now();
+          document.getElementById('dl-docx').href = `/telecharger/cv.docx?t=${t}`;
+          document.getElementById('dl-pdf').href = `/telecharger/cv.pdf?t=${t}`;
 
           remplirListe('corrections', (data.corrections && data.corrections.length)
             ? data.corrections : ['Aucune correction nécessaire : le CV est fidèle au profil.']);
