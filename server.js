@@ -14,7 +14,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 const MODELE = process.env.MODELE || 'claude-sonnet-5';
 
 // Dossier des fichiers exportés (cv.docx / cv.pdf). Écrasés à chaque génération, pas d'historique.
-const DOSSIER_SORTIE = path.join(__dirname, 'sortie');
+// Sur Vercel le FS est en lecture seule sauf /tmp ; en local on garde ./sortie.
+const DOSSIER_SORTIE = process.env.VERCEL
+  ? path.join(require('os').tmpdir(), 'sortie')
+  : path.join(__dirname, 'sortie');
 fs.mkdirSync(DOSSIER_SORTIE, { recursive: true });
 
 // Extrait le texte visible d'une page HTML : retire script/style, balises, décode les entités courantes.
