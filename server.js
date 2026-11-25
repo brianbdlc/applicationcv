@@ -5,12 +5,17 @@ const path = require('path');
 const express = require('express');
 const Anthropic = require('@anthropic-ai/sdk');
 const { moisEntre, formaterDuree } = require('./duree');
+const { genererDocx, genererPdf } = require('./rendu');
 
 const app = express();
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const MODELE = process.env.MODELE || 'claude-sonnet-5';
+
+// Dossier des fichiers exportés (cv.docx / cv.pdf). Écrasés à chaque génération, pas d'historique.
+const DOSSIER_SORTIE = path.join(__dirname, 'sortie');
+fs.mkdirSync(DOSSIER_SORTIE, { recursive: true });
 
 // Lit et parse profil.json. Lève une erreur typée (err.code) pour des messages distincts.
 function lireProfil() {
@@ -171,6 +176,11 @@ app.post('/api/generer', async (req, res) => {
     const releve = await relire(profil, brouillon, analyse.langue_offre);
     const cvModele = releve.cv || brouillon;
     const cv = { identite: profil.identite, langues: profil.langues, ...cvModele };
+
+    // Export fichiers : une source → deux rendus, écrase les précédents.
+    fs.writeFileSync(path.join(DOSSIER_SORTIE, 'cv.docx'), await genererDocx(cv, analyse.langue_offre));
+    fs.writeFileSync(path.join(DOSSIER_SORTIE, 'cv.pdf'), await genererPdf(cv, analyse.langue_offre));
+
     return res.json({
       analyse,
       cv,
@@ -183,6 +193,17 @@ app.post('/api/generer', async (req, res) => {
     return res.status(502).json({ erreur: 'Échec de la génération par Claude. Réessaie.' });
   }
 });
+
+// Téléchargement des derniers fichiers générés. 404 si aucune génération n'a encore eu lieu.
+for (const nom of ['cv.docx', 'cv.pdf']) {
+  app.get(`/telecharger/${nom}`, (req, res) => {
+    const fichier = path.join(DOSSIER_SORTIE, nom);
+    if (!fs.existsSync(fichier)) {
+      return res.status(404).json({ erreur: "Aucun fichier : génère d'abord un CV." });
+    }
+    res.download(fichier, nom);
+  });
+}
 
 if (require.main === module) {
   const PORT = process.env.PORT || 3000;
