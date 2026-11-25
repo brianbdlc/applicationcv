@@ -280,4 +280,7 @@ if (require.main === module) {
   });
 }
 
-module.exports = { lireProfil, analyser, rediger, relire, htmlVersTexte, recupererOffre };
+// Vercel détecte server.js et attend l'app Express en export par défaut (handler req/res).
+// Les fonctions nommées restent accessibles en propriétés (utilisées par les tests).
+Object.assign(app, { lireProfil, analyser, rediger, relire, htmlVersTexte, recupererOffre });
+module.exports = app;
