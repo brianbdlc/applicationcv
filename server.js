@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const Anthropic = require('@anthropic-ai/sdk');
+const { moisEntre, formaterDuree } = require('./duree');
 
 const app = express();
 app.use(express.json({ limit: '1mb' }));
@@ -59,14 +60,60 @@ async function analyser(profil, texteOffre) {
     ],
   });
 
+  return extraireJson(reponse);
+}
+
+// Isole et parse le premier objet JSON de la réponse (le modèle peut l'encadrer de texte).
+function extraireJson(reponse) {
   const bloc = reponse.content.find((b) => b.type === 'text');
   if (!bloc) throw new Error('Réponse Claude sans texte.');
-  // Le modèle peut encadrer le JSON ; on isole le premier objet.
   const texte = bloc.text.trim();
   const debut = texte.indexOf('{');
   const fin = texte.lastIndexOf('}');
   if (debut === -1 || fin === -1) throw new Error('Pas de JSON dans la réponse.');
   return JSON.parse(texte.slice(debut, fin + 1));
+}
+
+// Clone le profil et injecte une durée calculée en JS sur chaque expérience.
+function enrichirProfil(profil, langue) {
+  const copie = JSON.parse(JSON.stringify(profil));
+  for (const exp of copie.experiences || []) {
+    exp.duree = formaterDuree(moisEntre(exp.date_debut, exp.date_fin), langue);
+  }
+  return copie;
+}
+
+const SYSTEME_REDACTION = `Tu es un rédacteur de CV. On te donne le PROFIL enrichi d'un candidat (JSON, source de vérité), le TEXTE d'une offre, et une ANALYSE préalable (exigences couvertes / partielles / absentes).
+Rédige le CONTENU d'un CV taillé pour cette offre.
+
+Règles strictes :
+- N'utilise QUE les faits présents dans le profil. N'invente, n'extrapole, ne gonfle rien.
+- Écris dans la langue indiquée (fr ou en).
+- Ordonne les expériences par pertinence vis-à-vis de l'offre (la plus pertinente en premier), en t'appuyant sur les exigences couvertes/partielles.
+- N'inclus PAS dans le CV les exigences listées comme "absentes" : elles ne doivent apparaître nulle part.
+- Pour chaque expérience : "periode" = "<date_debut> – <date_fin>" (utilise "présent"/"present" si en cours) et "duree" = recopie EXACTEMENT le champ "duree" fourni dans le profil (ne le recalcule pas).
+- "realisations" : sélectionne et reformule pour l'offre, sans ajouter de fait absent du profil.
+- "competences" : uniquement des éléments issus de profil.competences et profil.outils, priorisés selon l'offre.
+- Ne produis NI identité, NI contact, NI langues : ils sont gérés hors du modèle.
+
+Réponds EXCLUSIVEMENT par un objet JSON valide, sans texte autour, de la forme :
+{"resume":"","experiences":[{"poste":"","entreprise":"","lieu":"","periode":"","duree":"","realisations":[]}],"formations":[{"diplome":"","etablissement":"","periode":""}],"competences":[]}`;
+
+async function rediger(profil, texteOffre, analyse) {
+  const enrichi = enrichirProfil(profil, analyse.langue_offre);
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const reponse = await client.messages.create({
+    model: MODELE,
+    max_tokens: 4000,
+    system: SYSTEME_REDACTION,
+    messages: [
+      {
+        role: 'user',
+        content: `LANGUE : ${analyse.langue_offre}\n\nPROFIL :\n${JSON.stringify(enrichi)}\n\nANALYSE :\n${JSON.stringify(analyse)}\n\nOFFRE :\n${texteOffre}`,
+      },
+    ],
+  });
+  return extraireJson(reponse);
 }
 
 app.post('/api/generer', async (req, res) => {
@@ -88,10 +135,12 @@ app.post('/api/generer', async (req, res) => {
 
   try {
     const analyse = await analyser(profil, texteOffre);
-    return res.json({ analyse });
+    const cvModele = await rediger(profil, texteOffre, analyse);
+    const cv = { identite: profil.identite, langues: profil.langues, ...cvModele };
+    return res.json({ analyse, cv });
   } catch (e) {
-    console.error('Échec analyse :', e.message);
-    return res.status(502).json({ erreur: "Échec de l'analyse par Claude. Réessaie." });
+    console.error('Échec génération :', e.message);
+    return res.status(502).json({ erreur: 'Échec de la génération par Claude. Réessaie.' });
   }
 });
 

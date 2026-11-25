@@ -20,6 +20,16 @@
     .liste ul { margin-top: 0; }
     .vide { color: #777; font-style: italic; }
     .hidden { display: none; }
+    .note { color: #991b1b; font-size: .85rem; margin-top: .1rem; }
+    #cv { margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid #e5e5e5; }
+    #cv h2 { font-size: 1.25rem; }
+    #cv h3 { font-size: 1rem; margin: 1rem 0 .25rem; }
+    #cv .contact { color: #444; }
+    #cv .exp { margin-bottom: 1rem; }
+    #cv .exp-tete { font-weight: 600; }
+    #cv .exp-meta { color: #555; font-size: .9rem; }
+    #cv .tags { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: .4rem; }
+    #cv .tags li { background: #eef2ff; color: #3730a3; padding: .15rem .55rem; border-radius: 4px; font-size: .9rem; }
   </style>
 </head>
 <body>
@@ -40,14 +50,115 @@
     <div class="listes">
       <div class="liste"><h2>✅ Exigences couvertes</h2><ul id="couvertes"></ul></div>
       <div class="liste"><h2>🟡 Partiellement couvertes</h2><ul id="partielles"></ul></div>
-      <div class="liste"><h2>❌ Absentes du profil</h2><ul id="absentes"></ul></div>
+      <div class="liste">
+        <h2>❌ Absentes du profil</h2>
+        <ul id="absentes"></ul>
+        <div class="note">Absent, ignoré — ces exigences ne figurent pas dans le CV.</div>
+      </div>
     </div>
+  </div>
+
+  <div id="cv" class="hidden">
+    <h2>📄 CV généré</h2>
+    <div id="cv-nom" class="exp-tete"></div>
+    <div id="cv-titre"></div>
+    <div id="cv-contact" class="contact"></div>
+
+    <h3 id="cv-h-resume">Résumé</h3>
+    <p id="cv-resume"></p>
+
+    <h3 id="cv-h-exp">Expérience</h3>
+    <div id="cv-experiences"></div>
+
+    <h3 id="cv-h-form">Formation</h3>
+    <div id="cv-formations"></div>
+
+    <h3 id="cv-h-comp">Compétences</h3>
+    <ul id="cv-competences" class="tags"></ul>
+
+    <h3 id="cv-h-lang">Langues</h3>
+    <ul id="cv-langues" class="tags"></ul>
   </div>
 
   <script>
     const btn = document.getElementById('btn');
     const erreurEl = document.getElementById('erreur');
     const resultatEl = document.getElementById('resultat');
+    const cvEl = document.getElementById('cv');
+
+    const LIBELLES = {
+      fr: { resume: 'Résumé', exp: 'Expérience', form: 'Formation', comp: 'Compétences', lang: 'Langues' },
+      en: { resume: 'Summary', exp: 'Experience', form: 'Education', comp: 'Skills', lang: 'Languages' },
+    };
+
+    function remplirTags(id, items) {
+      const ul = document.getElementById(id);
+      ul.innerHTML = '';
+      for (const item of items || []) {
+        const li = document.createElement('li');
+        li.textContent = item;
+        ul.appendChild(li);
+      }
+    }
+
+    function remplirCv(cv, langue) {
+      const L = LIBELLES[langue] || LIBELLES.fr;
+      document.getElementById('cv-h-resume').textContent = L.resume;
+      document.getElementById('cv-h-exp').textContent = L.exp;
+      document.getElementById('cv-h-form').textContent = L.form;
+      document.getElementById('cv-h-comp').textContent = L.comp;
+      document.getElementById('cv-h-lang').textContent = L.lang;
+
+      const id = cv.identite || {};
+      document.getElementById('cv-nom').textContent = id.nom || '';
+      document.getElementById('cv-titre').textContent = id.titre || '';
+      document.getElementById('cv-contact').textContent =
+        [id.email, id.telephone, id.lieu].filter(Boolean).join(' · ');
+      document.getElementById('cv-resume').textContent = cv.resume || '';
+
+      const expEl = document.getElementById('cv-experiences');
+      expEl.innerHTML = '';
+      for (const exp of cv.experiences || []) {
+        const div = document.createElement('div');
+        div.className = 'exp';
+        const tete = document.createElement('div');
+        tete.className = 'exp-tete';
+        tete.textContent = [exp.poste, exp.entreprise].filter(Boolean).join(' — ');
+        const meta = document.createElement('div');
+        meta.className = 'exp-meta';
+        const duree = exp.duree ? ` (${exp.duree})` : '';
+        meta.textContent = [exp.lieu, exp.periode ? exp.periode + duree : ''].filter(Boolean).join(' · ');
+        div.appendChild(tete);
+        div.appendChild(meta);
+        const ul = document.createElement('ul');
+        for (const r of exp.realisations || []) {
+          const li = document.createElement('li');
+          li.textContent = r;
+          ul.appendChild(li);
+        }
+        div.appendChild(ul);
+        expEl.appendChild(div);
+      }
+
+      const formEl = document.getElementById('cv-formations');
+      formEl.innerHTML = '';
+      for (const f of cv.formations || []) {
+        const div = document.createElement('div');
+        div.className = 'exp';
+        const tete = document.createElement('div');
+        tete.className = 'exp-tete';
+        tete.textContent = f.diplome || '';
+        const meta = document.createElement('div');
+        meta.className = 'exp-meta';
+        meta.textContent = [f.etablissement, f.periode].filter(Boolean).join(' · ');
+        div.appendChild(tete);
+        div.appendChild(meta);
+        formEl.appendChild(div);
+      }
+
+      remplirTags('cv-competences', cv.competences);
+      remplirTags('cv-langues', (cv.langues || []).map((l) => `${l.langue} (${l.niveau})`));
+    }
 
     function remplirListe(id, items) {
       const ul = document.getElementById(id);
@@ -67,8 +178,9 @@
       const texteOffre = document.getElementById('offre').value;
       erreurEl.classList.add('hidden');
       resultatEl.classList.add('hidden');
+      cvEl.classList.add('hidden');
       btn.disabled = true;
-      btn.textContent = 'Analyse en cours…';
+      btn.textContent = 'Génération en cours…';
 
       try {
         const r = await fetch('/api/generer', {
@@ -91,6 +203,11 @@
         remplirListe('partielles', a.partielles);
         remplirListe('absentes', a.absentes);
         resultatEl.classList.remove('hidden');
+
+        if (data.cv) {
+          remplirCv(data.cv, a.langue_offre);
+          cvEl.classList.remove('hidden');
+        }
       } catch (e) {
         erreurEl.textContent = 'Impossible de contacter le serveur.';
         erreurEl.classList.remove('hidden');
