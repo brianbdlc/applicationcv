@@ -12,8 +12,8 @@ const {
 const PDFDocument = require('pdfkit');
 
 const LIBELLES = {
-  fr: { resume: 'Résumé', exp: 'Expérience', form: 'Formation', comp: 'Compétences', lang: 'Langues' },
-  en: { resume: 'Summary', exp: 'Experience', form: 'Education', comp: 'Skills', lang: 'Languages' },
+  fr: { titrePoste: 'Titre du poste', resume: 'Résumé', exp: 'Expériences', benevolats: 'Bénévolats', form: 'Formations', comp: 'Compétences', lang: 'Langues', interets: 'Intérêts' },
+  en: { titrePoste: 'Target role', resume: 'Summary', exp: 'Experience', benevolats: 'Volunteering', form: 'Education', comp: 'Skills', lang: 'Languages', interets: 'Interests' },
 };
 
 // Formatte les faits du CV en lignes neutres, dans le même ordre que remplirCv (index.html).
@@ -24,14 +24,11 @@ function construireElements(cv, langue) {
   const el = [];
 
   if (id.nom) el.push({ type: 'titre', texte: id.nom });
-  if (id.titre) el.push({ type: 'soustitre', texte: id.titre });
-  const contact = [id.email, id.telephone, id.lieu].filter(Boolean).join(' · ');
+  const contact = [id.email, id.telephone, id.linkedin, id.lieu].filter(Boolean).join('  |  ');
   if (contact) el.push({ type: 'contact', texte: contact });
 
-  if (cv.resume) {
-    el.push({ type: 'section', texte: L.resume });
-    el.push({ type: 'paragraphe', texte: cv.resume });
-  }
+  if (id.titre) el.push({ type: 'label', label: L.titrePoste, texte: id.titre });
+  if (cv.resume) el.push({ type: 'label', label: L.resume, texte: cv.resume });
 
   if ((cv.experiences || []).length) {
     el.push({ type: 'section', texte: L.exp });
@@ -42,6 +39,11 @@ function construireElements(cv, langue) {
       if (meta) el.push({ type: 'meta', texte: meta });
       for (const r of exp.realisations || []) el.push({ type: 'puce', texte: r });
     }
+  }
+
+  if ((cv.benevolats || []).length) {
+    el.push({ type: 'section', texte: L.benevolats });
+    for (const b of cv.benevolats) el.push({ type: 'puce', texte: b });
   }
 
   if ((cv.formations || []).length) {
@@ -55,12 +57,15 @@ function construireElements(cv, langue) {
 
   if ((cv.competences || []).length) {
     el.push({ type: 'section', texte: L.comp });
-    el.push({ type: 'paragraphe', texte: cv.competences.join(' · ') });
+    el.push({ type: 'paragraphe', texte: cv.competences.join('  |  ') });
   }
 
   if ((cv.langues || []).length) {
-    el.push({ type: 'section', texte: L.lang });
-    el.push({ type: 'paragraphe', texte: cv.langues.map((l) => `${l.langue} (${l.niveau})`).join(' · ') });
+    el.push({ type: 'label', label: L.lang, texte: cv.langues.map((l) => `${l.langue} (${l.niveau})`).join('  |  ') });
+  }
+
+  if ((cv.interets || []).length) {
+    el.push({ type: 'label', label: L.interets, texte: cv.interets.join('  |  ') });
   }
 
   return el;
@@ -73,8 +78,11 @@ function genererDocx(cv, langue) {
       case 'titre':
         children.push(new Paragraph({ text: e.texte, heading: HeadingLevel.TITLE }));
         break;
-      case 'soustitre':
-        children.push(new Paragraph({ children: [new TextRun({ text: e.texte, bold: true })] }));
+      case 'label':
+        children.push(new Paragraph({ children: [
+          new TextRun({ text: `${e.label} : `, bold: true }),
+          new TextRun({ text: e.texte }),
+        ] }));
         break;
       case 'section':
         children.push(new Paragraph({ text: e.texte, heading: HeadingLevel.HEADING_1, thematicBreak: true }));
@@ -106,11 +114,13 @@ function genererPdf(cv, langue) {
         case 'titre':
           doc.font('Helvetica-Bold').fontSize(20).text(e.texte);
           break;
-        case 'soustitre':
-          doc.font('Helvetica-Bold').fontSize(12).text(e.texte);
-          break;
         case 'contact':
           doc.font('Helvetica').fontSize(10).text(e.texte).moveDown(0.5);
+          break;
+        case 'label':
+          doc.fontSize(10).font('Helvetica-Bold').text(`${e.label} : `, { continued: true })
+            .font('Helvetica').text(e.texte);
+          doc.moveDown(0.25);
           break;
         case 'section':
           doc.moveDown(0.5).font('Helvetica-Bold').fontSize(13).text(e.texte).moveDown(0.25);

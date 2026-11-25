@@ -14,7 +14,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 const MODELE = process.env.MODELE || 'claude-sonnet-5';
 
 // Dossier des fichiers exportés (cv.docx / cv.pdf). Écrasés à chaque génération, pas d'historique.
-const DOSSIER_SORTIE = path.join(__dirname, 'sortie');
+// Sur Vercel le FS est en lecture seule sauf /tmp ; en local on garde ./sortie.
+const DOSSIER_SORTIE = process.env.VERCEL
+  ? path.join(require('os').tmpdir(), 'sortie')
+  : path.join(__dirname, 'sortie');
 fs.mkdirSync(DOSSIER_SORTIE, { recursive: true });
 
 // Extrait le texte visible d'une page HTML : retire script/style, balises, décode les entités courantes.
@@ -233,7 +236,14 @@ app.post('/api/generer', async (req, res) => {
     const brouillon = await rediger(profil, texteOffre, analyse);
     const releve = await relire(profil, brouillon, analyse.langue_offre);
     const cvModele = releve.cv || brouillon;
-    const cv = { identite: profil.identite, langues: profil.langues, ...cvModele };
+    // benevolats/interets : repris verbatim du profil (hors passes LLM), comme identite/langues.
+    const cv = {
+      identite: profil.identite,
+      langues: profil.langues,
+      benevolats: profil.benevolats || [],
+      interets: profil.interets || [],
+      ...cvModele,
+    };
 
     // Export fichiers : une source → deux rendus, écrase les précédents.
     fs.writeFileSync(path.join(DOSSIER_SORTIE, 'cv.docx'), await genererDocx(cv, analyse.langue_offre));
@@ -270,4 +280,7 @@ if (require.main === module) {
   });
 }
 
-module.exports = { lireProfil, analyser, rediger, relire, htmlVersTexte, recupererOffre };
+// Vercel détecte server.js et attend l'app Express en export par défaut (handler req/res).
+// Les fonctions nommées restent accessibles en propriétés (utilisées par les tests).
+Object.assign(app, { lireProfil, analyser, rediger, relire, htmlVersTexte, recupererOffre });
+module.exports = app;
