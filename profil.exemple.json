@@ -1,0 +1,69 @@
+{
+  "identite": {
+    "nom": "Camille Martin",
+    "email": "camille.martin@exemple.fr",
+    "telephone": "+33 6 12 34 56 78",
+    "lieu": "Lyon, France",
+    "titre": "Développeuse web full-stack"
+  },
+  "resume": "Développeuse full-stack avec 5 ans d'expérience sur des applications web JavaScript. J'aime livrer des produits simples et fiables, du front à la base de données.",
+  "experiences": [
+    {
+      "poste": "Développeuse full-stack",
+      "entreprise": "Atelier Numérique",
+      "lieu": "Lyon, France",
+      "date_debut": "2021-09",
+      "date_fin": "present",
+      "realisations": [
+        "Conception et maintenance d'une application de gestion interne en Node.js et React utilisée par 40 collaborateurs.",
+        "Mise en place d'une base de données PostgreSQL et migration des données depuis un ancien outil.",
+        "Réduction du temps de chargement des pages principales de 40 %."
+      ]
+    },
+    {
+      "poste": "Développeuse front-end",
+      "entreprise": "Studio Pixel",
+      "lieu": "Villeurbanne, France",
+      "date_debut": "2019-03",
+      "date_fin": "2021-08",
+      "realisations": [
+        "Intégration de maquettes en HTML/CSS/JavaScript pour une dizaine de sites clients.",
+        "Création d'une bibliothèque de composants réutilisables adoptée par l'équipe."
+      ]
+    }
+  ],
+  "formations": [
+    {
+      "diplome": "Licence professionnelle Développement web",
+      "etablissement": "Université Lyon 1",
+      "date_debut": "2018-09",
+      "date_fin": "2019-06"
+    },
+    {
+      "diplome": "BTS Services informatiques aux organisations",
+      "etablissement": "Lycée La Martinière",
+      "date_debut": "2016-09",
+      "date_fin": "2018-06"
+    }
+  ],
+  "competences": [
+    "JavaScript",
+    "Développement front-end",
+    "Développement back-end",
+    "Conception de bases de données",
+    "Intégration HTML/CSS",
+    "Travail en équipe"
+  ],
+  "outils": [
+    "Node.js",
+    "React",
+    "Express",
+    "PostgreSQL",
+    "Git",
+    "Figma"
+  ],
+  "langues": [
+    { "langue": "Français", "niveau": "Natif" },
+    { "langue": "Anglais", "niveau": "Courant" }
+  ]
+}
